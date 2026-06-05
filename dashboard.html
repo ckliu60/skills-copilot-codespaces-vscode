@@ -1,0 +1,1129 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>股市晨報儀表板</title>
+<style>
+  :root {
+    --bg-main: #1a1a2e;
+    --bg-card: #16213e;
+    --bg-card2: #0f3460;
+    --bg-header: #0d1117;
+    --accent: #e94560;
+    --accent2: #0f3460;
+    --up-color: #ff4d4d;
+    --down-color: #2ecc71;
+    --neutral: #f0a500;
+    --text-primary: #e0e0e0;
+    --text-secondary: #9aa3b2;
+    --text-muted: #5a6478;
+    --border: #2a3550;
+    --tag-tsmc: #e94560;
+    --tag-mtk: #7c3aed;
+    --tag-nvda: #10b981;
+    --tag-msft: #3b82f6;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg-main);
+    color: var(--text-primary);
+    font-family: 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  /* ===== Header ===== */
+  .header {
+    background: var(--bg-header);
+    border-bottom: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 28px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+
+  .header-left h1 {
+    font-size: 1.9rem;
+    font-weight: 700;
+    letter-spacing: 2px;
+    background: linear-gradient(135deg, #e94560, #a78bfa);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .header-left .subtitle {
+    font-size: 0.82rem;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .header-right {
+    text-align: right;
+  }
+
+  .timestamp {
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+  }
+
+  .live-badge {
+    display: inline-block;
+    background: #1a3a2a;
+    color: var(--down-color);
+    border: 1px solid var(--down-color);
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    margin-top: 6px;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+
+  .data-notice {
+    background: #1e1e0a;
+    border: 1px solid #f0a500;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 0.78rem;
+    color: #f0a500;
+    margin-bottom: 20px;
+    display: none;
+  }
+
+  /* ===== Section Title ===== */
+  .section-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 2px;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ===== Stock Grid ===== */
+  .stock-section { margin-bottom: 32px; }
+
+  .stock-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .stock-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stock-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+
+  .stock-card[data-symbol="2330"]::before { background: var(--tag-tsmc); }
+  .stock-card[data-symbol="2454"]::before { background: var(--tag-mtk); }
+  .stock-card[data-symbol="NVDA"]::before  { background: var(--tag-nvda); }
+  .stock-card[data-symbol="MSFT"]::before  { background: var(--tag-msft); }
+
+  .stock-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 30px rgba(0,0,0,0.4);
+  }
+
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+
+  .stock-name { font-size: 1rem; font-weight: 600; color: var(--text-primary); }
+  .stock-symbol { font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+
+  .exchange-badge {
+    font-size: 0.68rem;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-weight: 600;
+  }
+
+  .badge-tw  { background: #2a1a3e; color: #c084fc; border: 1px solid #7c3aed; }
+  .badge-us  { background: #0a2a1a; color: #6ee7b7; border: 1px solid #059669; }
+
+  /* Price area */
+  .price-area { margin-bottom: 16px; }
+
+  .current-price {
+    font-size: 2.2rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .currency-symbol {
+    font-size: 1rem;
+    color: var(--text-muted);
+    margin-right: 2px;
+  }
+
+  .price-change {
+    font-size: 0.88rem;
+    font-weight: 600;
+    margin-top: 6px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .up   { color: var(--up-color); }
+  .down { color: var(--down-color); }
+  .flat { color: var(--neutral); }
+
+  /* Data rows */
+  .data-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+
+  .data-item {
+    background: #0d1117;
+    border-radius: 8px;
+    padding: 8px 10px;
+    text-align: center;
+  }
+
+  .data-label {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    letter-spacing: 0.5px;
+  }
+
+  .data-value {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* PnL */
+  .pnl-bar {
+    background: #0d1117;
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .pnl-label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+  }
+
+  .pnl-amount {
+    font-size: 1.05rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .pnl-rate {
+    font-size: 0.82rem;
+    font-weight: 600;
+  }
+
+  /* ===== Summary Bar ===== */
+  .summary-bar {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 24px;
+    margin-bottom: 28px;
+    display: flex;
+    gap: 32px;
+    flex-wrap: wrap;
+  }
+
+  .summary-item { text-align: center; }
+
+  .summary-label {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    margin-bottom: 4px;
+  }
+
+  .summary-value {
+    font-size: 1.1rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ===== News Section ===== */
+  .news-section { margin-top: 8px; }
+
+  .filter-bar {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 18px;
+  }
+
+  .filter-btn {
+    background: #1e2a3e;
+    color: var(--text-secondary);
+    border: 1px solid var(--border);
+    padding: 7px 18px;
+    border-radius: 20px;
+    font-size: 0.82rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-family: inherit;
+  }
+
+  .filter-btn:hover {
+    background: #263550;
+    color: var(--text-primary);
+  }
+
+  .filter-btn.active {
+    background: var(--bg-card2);
+    color: #a5b4fc;
+    border-color: #6366f1;
+  }
+
+  .news-list { display: flex; flex-direction: column; gap: 10px; }
+
+  .news-item {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 18px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    transition: background 0.2s;
+  }
+
+  .news-item:hover { background: #1c2940; }
+
+  .news-item.hidden { display: none; }
+
+  .news-tag {
+    font-size: 0.65rem;
+    font-weight: 700;
+    padding: 3px 9px;
+    border-radius: 4px;
+    white-space: nowrap;
+    margin-top: 2px;
+    flex-shrink: 0;
+  }
+
+  .tag-2330 { background: #2a0a14; color: #ff6b81; border: 1px solid #e94560; }
+  .tag-2454 { background: #1a0a2e; color: #c084fc; border: 1px solid #7c3aed; }
+  .tag-NVDA { background: #0a2a1a; color: #6ee7b7; border: 1px solid #059669; }
+  .tag-MSFT { background: #0a1a2e; color: #93c5fd; border: 1px solid #3b82f6; }
+
+  .news-content { flex: 1; min-width: 0; }
+
+  .news-title {
+    font-size: 0.88rem;
+    color: var(--text-primary);
+    text-decoration: none;
+    line-height: 1.5;
+    display: block;
+  }
+
+  .news-title:hover { color: #a5b4fc; text-decoration: underline; }
+
+  .news-meta {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    margin-top: 5px;
+  }
+
+  /* ===== Loading Skeleton ===== */
+  .skeleton {
+    background: linear-gradient(90deg, #1e2a3e 25%, #263550 50%, #1e2a3e 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 4px;
+    height: 1em;
+    display: inline-block;
+    width: 80%;
+  }
+
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  /* ===== Footer ===== */
+  .footer {
+    text-align: center;
+    margin-top: 36px;
+    padding: 16px;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ===== Responsive ===== */
+  @media (max-width: 600px) {
+    .header { padding: 16px; }
+    .header-left h1 { font-size: 1.4rem; }
+    .current-price { font-size: 1.8rem; }
+    body { padding: 12px; }
+    .summary-bar { gap: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <h1>📈 股市晨報</h1>
+    <div class="subtitle">Daily Stock Morning Report Dashboard</div>
+  </div>
+  <div class="header-right">
+    <div class="timestamp" id="update-time">資料載入中...</div>
+    <div class="live-badge" id="data-source-badge">● 示範資料</div>
+  </div>
+</div>
+
+<div class="data-notice" id="data-notice">
+  ⚠️ 目前使用內嵌示範資料（網路受限或 API 不可用）。請在有網路的環境開啟此頁面以自動抓取最新股價。
+</div>
+
+<!-- Portfolio Summary -->
+<div class="summary-bar" id="summary-bar">
+  <div class="summary-item">
+    <div class="summary-label">台股總現值</div>
+    <div class="summary-value" id="tw-total-value">計算中...</div>
+  </div>
+  <div class="summary-item">
+    <div class="summary-label">台股總損益</div>
+    <div class="summary-value" id="tw-total-pnl">計算中...</div>
+  </div>
+  <div class="summary-item">
+    <div class="summary-label">美股總現值</div>
+    <div class="summary-value" id="us-total-value">計算中...</div>
+  </div>
+  <div class="summary-item">
+    <div class="summary-label">美股總損益</div>
+    <div class="summary-value" id="us-total-pnl">計算中...</div>
+  </div>
+</div>
+
+<!-- Taiwan Stocks -->
+<div class="stock-section">
+  <div class="section-label">🇹🇼 台股</div>
+  <div class="stock-grid" id="tw-grid">
+
+    <div class="stock-card" data-symbol="2330">
+      <div class="card-top">
+        <div>
+          <div class="stock-name">台積電</div>
+          <div class="stock-symbol">TSE: 2330</div>
+        </div>
+        <span class="exchange-badge badge-tw">台股</span>
+      </div>
+      <div class="price-area">
+        <div class="current-price">
+          <span class="currency-symbol">NT$</span><span id="price-2330">1,050</span>
+        </div>
+        <div class="price-change" id="change-2330">
+          <span>▲</span><span>+15.00 (+1.45%)</span>
+        </div>
+      </div>
+      <div class="data-grid">
+        <div class="data-item">
+          <div class="data-label">現值</div>
+          <div class="data-value" id="val-2330">$1,050,000</div>
+        </div>
+        <div class="data-item">
+          <div class="data-label">成本</div>
+          <div class="data-value" id="cost-2330">$850,000</div>
+        </div>
+        <div class="data-item">
+          <div class="data-label">持股數</div>
+          <div class="data-value">1,000</div>
+        </div>
+      </div>
+      <div class="pnl-bar">
+        <div>
+          <div class="pnl-label">累計損益</div>
+          <div class="pnl-amount up" id="pnl-2330">+$200,000</div>
+        </div>
+        <div class="pnl-rate up" id="pnlrate-2330">+23.53%</div>
+      </div>
+    </div>
+
+    <div class="stock-card" data-symbol="2454">
+      <div class="card-top">
+        <div>
+          <div class="stock-name">聯發科</div>
+          <div class="stock-symbol">TSE: 2454</div>
+        </div>
+        <span class="exchange-badge badge-tw">台股</span>
+      </div>
+      <div class="price-area">
+        <div class="current-price">
+          <span class="currency-symbol">NT$</span><span id="price-2454">1,380</span>
+        </div>
+        <div class="price-change" id="change-2454">
+          <span>▲</span><span>+25.00 (+1.85%)</span>
+        </div>
+      </div>
+      <div class="data-grid">
+        <div class="data-item">
+          <div class="data-label">現值</div>
+          <div class="data-value" id="val-2454">$690,000</div>
+        </div>
+        <div class="data-item">
+          <div class="data-label">成本</div>
+          <div class="data-value" id="cost-2454">$600,000</div>
+        </div>
+        <div class="data-item">
+          <div class="data-label">持股數</div>
+          <div class="data-value">500</div>
+        </div>
+      </div>
+      <div class="pnl-bar">
+        <div>
+          <div class="pnl-label">累計損益</div>
+          <div class="pnl-amount up" id="pnl-2454">+$90,000</div>
+        </div>
+        <div class="pnl-rate up" id="pnlrate-2454">+15.00%</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- US Stocks -->
+<div class="stock-section">
+  <div class="section-label">🇺🇸 美股</div>
+  <div class="stock-grid" id="us-grid">
+
+    <div class="stock-card" data-symbol="NVDA">
+      <div class="card-top">
+        <div>
+          <div class="stock-name">Nvidia</div>
+          <div class="stock-symbol">NASDAQ: NVDA</div>
+        </div>
+        <span class="exchange-badge badge-us">US</span>
+      </div>
+      <div class="price-area">
+        <div class="current-price">
+          <span class="currency-symbol">$</span><span id="price-NVDA">135.42</span>
+        </div>
+        <div class="price-change" id="change-NVDA">
+          <span>▲</span><span>+3.18 (+2.40%)</span>
+        </div>
+      </div>
+      <div class="data-grid">
+        <div class="data-item">
+          <div class="data-label">現值</div>
+          <div class="data-value" id="val-NVDA">$27,084</div>
+        </div>
+        <div class="data-item">
+          <div class="data-label">成本</div>
+          <div class="data-value" id="cost-NVDA">$18,000</div>
+        </div>
+        <div class="data-item">
+          <div class="data-label">持股數</div>
+          <div class="data-value">200</div>
+        </div>
+      </div>
+      <div class="pnl-bar">
+        <div>
+          <div class="pnl-label">累計損益</div>
+          <div class="pnl-amount up" id="pnl-NVDA">+$9,084</div>
+        </div>
+        <div class="pnl-rate up" id="pnlrate-NVDA">+50.47%</div>
+      </div>
+    </div>
+
+    <div class="stock-card" data-symbol="MSFT">
+      <div class="card-top">
+        <div>
+          <div class="stock-name">微軟</div>
+          <div class="stock-symbol">NASDAQ: MSFT</div>
+        </div>
+        <span class="exchange-badge badge-us">US</span>
+      </div>
+      <div class="price-area">
+        <div class="current-price">
+          <span class="currency-symbol">$</span><span id="price-MSFT">455.20</span>
+        </div>
+        <div class="price-change" id="change-MSFT">
+          <span>▲</span><span>+5.30 (+1.18%)</span>
+        </div>
+      </div>
+      <div class="data-grid">
+        <div class="data-item">
+          <div class="data-label">現值</div>
+          <div class="data-value" id="val-MSFT">$45,520</div>
+        </div>
+        <div class="data-item">
+          <div class="data-label">成本</div>
+          <div class="data-value" id="cost-MSFT">$38,000</div>
+        </div>
+        <div class="data-item">
+          <div class="data-label">持股數</div>
+          <div class="data-value">100</div>
+        </div>
+      </div>
+      <div class="pnl-bar">
+        <div>
+          <div class="pnl-label">累計損益</div>
+          <div class="pnl-amount up" id="pnl-MSFT">+$7,520</div>
+        </div>
+        <div class="pnl-rate up" id="pnlrate-MSFT">+19.79%</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- News Section -->
+<div class="news-section">
+  <div class="section-label">📰 最新新聞</div>
+
+  <div class="filter-bar">
+    <button class="filter-btn active" data-filter="all">全部</button>
+    <button class="filter-btn" data-filter="2330">台積電</button>
+    <button class="filter-btn" data-filter="2454">聯發科</button>
+    <button class="filter-btn" data-filter="NVDA">NVDA</button>
+    <button class="filter-btn" data-filter="MSFT">MSFT</button>
+  </div>
+
+  <div class="news-list" id="news-list">
+
+    <!-- TSMC News -->
+    <div class="news-item" data-stock="2330">
+      <span class="news-tag tag-2330">台積電</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">台積電 CoWoS 先進封裝產能供不應求，2025 年擴建計畫加速推進</a>
+        <div class="news-meta">經濟日報 · 2026-06-05 07:30</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="2330">
+      <span class="news-tag tag-2330">台積電</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">TSMC 2nm Chip Production Ramp on Schedule, Apple A20 First in Line</a>
+        <div class="news-meta">Bloomberg · 2026-06-05 06:15</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="2330">
+      <span class="news-tag tag-2330">台積電</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">台積電亞利桑那廠 N4 製程量產，良率達預期水準</a>
+        <div class="news-meta">工商時報 · 2026-06-04 18:45</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="2330">
+      <span class="news-tag tag-2330">台積電</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">TSMC Reports Strong AI Server Demand from Major Hyperscalers in Q2</a>
+        <div class="news-meta">Reuters · 2026-06-04 14:20</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="2330">
+      <span class="news-tag tag-2330">台積電</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">外資上調台積電目標價至 1200 元，AI 晶片需求強勁</a>
+        <div class="news-meta">MoneyDJ · 2026-06-04 11:00</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="2330">
+      <span class="news-tag tag-2330">台積電</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">台積電 5 月營收年增 38%，創歷史新高紀錄</a>
+        <div class="news-meta">財訊 · 2026-06-04 09:00</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="2330">
+      <span class="news-tag tag-2330">台積電</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">TSMC Plans to Expand Japan Fab Capacity Following Strong Order Intake</a>
+        <div class="news-meta">Nikkei Asia · 2026-06-03 22:30</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="2330">
+      <span class="news-tag tag-2330">台積電</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">台積電加入 AI 聯盟，攜手 NVIDIA 打造次世代 AI 晶片生態系</a>
+        <div class="news-meta">電子時報 · 2026-06-03 16:00</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="2330">
+      <span class="news-tag tag-2330">台積電</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">分析師預測台積電 Q3 毛利率將回升至 55% 以上</a>
+        <div class="news-meta">Anue 鉅亨 · 2026-06-03 14:10</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="2330">
+      <span class="news-tag tag-2330">台積電</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">TSMC Wafer Shipments Hit Record High Amid Surging AI Chip Orders</a>
+        <div class="news-meta">Digitimes · 2026-06-03 10:00</div>
+      </div>
+    </div>
+
+    <!-- MediaTek News -->
+    <div class="news-item" data-stock="2454">
+      <span class="news-tag tag-2454">聯發科</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">聯發科天璣 9400+ 正式發表，AI 效能大幅提升</a>
+        <div class="news-meta">科技新報 · 2026-06-05 08:00</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="2454">
+      <span class="news-tag tag-2454">聯發科</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">MediaTek Dimensity AI Chip to Power Next-Gen Edge AI Devices</a>
+        <div class="news-meta">The Verge · 2026-06-05 05:30</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="2454">
+      <span class="news-tag tag-2454">聯發科</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">聯發科攜手三星，合作開發車用 AI 晶片平台</a>
+        <div class="news-meta">工商時報 · 2026-06-04 17:00</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="2454">
+      <span class="news-tag tag-2454">聯發科</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">MediaTek Q1 2026 Revenue Beats Estimates, Raises Full-Year Guidance</a>
+        <div class="news-meta">Reuters · 2026-06-04 13:00</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="2454">
+      <span class="news-tag tag-2454">聯發科</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">外資買超聯發科逾萬張，法人看好下半年旺季行情</a>
+        <div class="news-meta">MoneyDJ · 2026-06-04 10:30</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="2454">
+      <span class="news-tag tag-2454">聯發科</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">聯發科布局衛星通訊晶片，搶攻低軌道衛星市場</a>
+        <div class="news-meta">電子時報 · 2026-06-04 09:15</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="2454">
+      <span class="news-tag tag-2454">聯發科</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">MediaTek Wins Major Design Win at Leading Chinese Android OEM</a>
+        <div class="news-meta">DigiTimes · 2026-06-03 20:00</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="2454">
+      <span class="news-tag tag-2454">聯發科</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">聯發科股利政策優化，現金股利配發率提升</a>
+        <div class="news-meta">財訊 · 2026-06-03 15:00</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="2454">
+      <span class="news-tag tag-2454">聯發科</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">MediaTek Expands R&D in Europe, Opens New AI Lab in Munich</a>
+        <div class="news-meta">EE Times · 2026-06-03 11:00</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="2454">
+      <span class="news-tag tag-2454">聯發科</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">聯發科無線充電技術獲 Apple 採用，供應鏈訂單大增</a>
+        <div class="news-meta">鉅亨網 · 2026-06-03 09:00</div>
+      </div>
+    </div>
+
+    <!-- NVDA News -->
+    <div class="news-item" data-stock="NVDA">
+      <span class="news-tag tag-NVDA">NVDA</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">NVIDIA Announces Blackwell Ultra GPU, Promising 10x AI Training Speed</a>
+        <div class="news-meta">TechCrunch · 2026-06-05 07:00</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="NVDA">
+      <span class="news-tag tag-NVDA">NVDA</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">NVIDIA 宣布與 AWS 深化合作，打造下一代 AI 超算基礎設施</a>
+        <div class="news-meta">科技新報 · 2026-06-05 06:30</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="NVDA">
+      <span class="news-tag tag-NVDA">NVDA</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">Nvidia Stock Hits New All-Time High on Record AI Data Center Orders</a>
+        <div class="news-meta">CNBC · 2026-06-04 16:00</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="NVDA">
+      <span class="news-tag tag-NVDA">NVDA</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">Jensen Huang Keynote: AI Will Reshape Every Industry, NVDA at Center</a>
+        <div class="news-meta">Bloomberg · 2026-06-04 12:30</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="NVDA">
+      <span class="news-tag tag-NVDA">NVDA</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">分析師上調輝達目標價至 200 美元，AI 晶片需求超乎預期</a>
+        <div class="news-meta">Anue 鉅亨 · 2026-06-04 10:00</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="NVDA">
+      <span class="news-tag tag-NVDA">NVDA</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">NVIDIA's CUDA Ecosystem Has 5 Million Developers, Jensen Says</a>
+        <div class="news-meta">The Register · 2026-06-04 09:00</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="NVDA">
+      <span class="news-tag tag-NVDA">NVDA</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">Nvidia Partners with SoftBank to Deploy 100,000 AI GPUs in Japan</a>
+        <div class="news-meta">Nikkei · 2026-06-03 21:00</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="NVDA">
+      <span class="news-tag tag-NVDA">NVDA</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">輝達加入 ISO 標準委員會，推動 AI 安全標準制定</a>
+        <div class="news-meta">科技報橘 · 2026-06-03 15:30</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="NVDA">
+      <span class="news-tag tag-NVDA">NVDA</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">NVDA Q2 2026 Earnings Preview: Revenue Expected to Cross $45B</a>
+        <div class="news-meta">Seeking Alpha · 2026-06-03 14:00</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="NVDA">
+      <span class="news-tag tag-NVDA">NVDA</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">Nvidia's Automotive Division Revenue Doubles Year-over-Year</a>
+        <div class="news-meta">Electrek · 2026-06-03 10:00</div>
+      </div>
+    </div>
+
+    <!-- MSFT News -->
+    <div class="news-item" data-stock="MSFT">
+      <span class="news-tag tag-MSFT">MSFT</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">Microsoft Copilot+ PC Sales Surge, Driving Cloud and AI Growth</a>
+        <div class="news-meta">Bloomberg · 2026-06-05 07:45</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="MSFT">
+      <span class="news-tag tag-MSFT">MSFT</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">微軟 Azure AI 服務月活躍用戶突破 10 億，企業採用率創新高</a>
+        <div class="news-meta">數位時代 · 2026-06-05 07:00</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="MSFT">
+      <span class="news-tag tag-MSFT">MSFT</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">Microsoft Teams Adds GPT-4o Powered Real-Time Translation for 100 Languages</a>
+        <div class="news-meta">The Verge · 2026-06-04 15:00</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="MSFT">
+      <span class="news-tag tag-MSFT">MSFT</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">Microsoft Raises Dividend by 10%, Announces $60B Share Buyback</a>
+        <div class="news-meta">CNBC · 2026-06-04 14:00</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="MSFT">
+      <span class="news-tag tag-MSFT">MSFT</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">微軟 Xbox Game Studio 宣布收購知名遊戲開發商，強化內容生態</a>
+        <div class="news-meta">T 客邦 · 2026-06-04 11:00</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="MSFT">
+      <span class="news-tag tag-MSFT">MSFT</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">Microsoft Azure OpenAI Gains New Enterprise Clients, Including Top 5 Banks</a>
+        <div class="news-meta">Reuters · 2026-06-04 09:30</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="MSFT">
+      <span class="news-tag tag-MSFT">MSFT</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">微軟將 Windows 12 AI 功能整合至企業版，推出 Copilot 企業套件</a>
+        <div class="news-meta">iThome · 2026-06-03 20:00</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="MSFT">
+      <span class="news-tag tag-MSFT">MSFT</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">Analyst Raises MSFT Price Target to $600, Cites Azure AI Leadership</a>
+        <div class="news-meta">Barclays Research · 2026-06-03 16:00</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="MSFT">
+      <span class="news-tag tag-MSFT">MSFT</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">Microsoft Security Revenue Crosses $25B Annual Run Rate</a>
+        <div class="news-meta">Ars Technica · 2026-06-03 13:00</div>
+      </div>
+    </div>
+    <div class="news-item" data-stock="MSFT">
+      <span class="news-tag tag-MSFT">MSFT</span>
+      <div class="news-content">
+        <a class="news-title" href="#" target="_blank">微軟 GitHub Copilot 企業用戶突破 180 萬，開發效率提升顯著</a>
+        <div class="news-meta">開發者頭條 · 2026-06-03 10:00</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Footer -->
+<div class="footer">
+  股市晨報 Dashboard · 資料來源：Yahoo Finance &amp; 公開市場資訊 · 本資料僅供參考，不構成投資建議
+</div>
+
+<script>
+// ===== 持倉設定（對應 stock_config.md）=====
+const HOLDINGS = {
+  "2330": { name: "台積電", shares: 1000, cost: 850, currency: "TWD", symbol: "NT$" },
+  "2454": { name: "聯發科", shares: 500, cost: 1200, currency: "TWD", symbol: "NT$" },
+  "NVDA": { name: "Nvidia",  shares: 200, cost: 90,   currency: "USD", symbol: "$" },
+  "MSFT": { name: "微軟",   shares: 100, cost: 380,  currency: "USD", symbol: "$" }
+};
+
+// ===== 預設（示範）資料 =====
+const DEFAULT_DATA = {
+  "2330": { price: 1050, change: 15.00, pct: 1.45 },
+  "2454": { price: 1380, change: 25.00, pct: 1.85 },
+  "NVDA": { price: 135.42, change: 3.18, pct: 2.40 },
+  "MSFT": { price: 455.20, change: 5.30, pct: 1.18 }
+};
+
+// ===== 格式化工具 =====
+function fmt(n, decimals = 0) {
+  return n.toLocaleString('zh-TW', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+}
+
+function fmtPrice(n, symbol) {
+  const d = symbol === "$" ? 2 : 0;
+  return fmt(n, d);
+}
+
+function dirClass(n) {
+  if (n > 0) return 'up';
+  if (n < 0) return 'down';
+  return 'flat';
+}
+
+function dirArrow(n) {
+  if (n > 0) return '▲';
+  if (n < 0) return '▼';
+  return '─';
+}
+
+// ===== 渲染單張卡片 =====
+function renderCard(ticker, price, change, pct) {
+  const h = HOLDINGS[ticker];
+  const cls = dirClass(change);
+  const isTW = h.currency === "TWD";
+
+  const currentVal = price * h.shares;
+  const costVal    = h.cost * h.shares;
+  const pnl        = currentVal - costVal;
+  const pnlRate    = (pnl / costVal) * 100;
+  const pnlCls     = dirClass(pnl);
+  const sym        = h.symbol;
+
+  // Price
+  document.getElementById(`price-${ticker}`).textContent = fmtPrice(price, sym);
+
+  // Change row
+  const changeEl = document.getElementById(`change-${ticker}`);
+  const absChange = Math.abs(change);
+  const absPct    = Math.abs(pct);
+  changeEl.innerHTML = `<span>${dirArrow(change)}</span>
+    <span>${change >= 0 ? '+' : '-'}${fmtPrice(absChange, sym)} (${change >= 0 ? '+' : '-'}${absPct.toFixed(2)}%)</span>`;
+  changeEl.className = `price-change ${cls}`;
+
+  // Data grid
+  const valEl  = document.getElementById(`val-${ticker}`);
+  const costEl = document.getElementById(`cost-${ticker}`);
+  if (isTW) {
+    valEl.textContent  = `NT$${fmt(currentVal)}`;
+    costEl.textContent = `NT$${fmt(costVal)}`;
+  } else {
+    valEl.textContent  = `$${fmt(currentVal, 0)}`;
+    costEl.textContent = `$${fmt(costVal, 0)}`;
+  }
+
+  // PnL
+  const pnlAmtEl  = document.getElementById(`pnl-${ticker}`);
+  const pnlRateEl = document.getElementById(`pnlrate-${ticker}`);
+  if (isTW) {
+    pnlAmtEl.textContent = `${pnl >= 0 ? '+' : ''}NT$${fmt(pnl)}`;
+  } else {
+    pnlAmtEl.textContent = `${pnl >= 0 ? '+' : ''}$${fmt(Math.abs(pnl), 0)}${pnl < 0 ? ' (虧損)' : ''}`;
+  }
+  pnlAmtEl.className = `pnl-amount ${pnlCls}`;
+  pnlRateEl.textContent = `${pnlRate >= 0 ? '+' : ''}${pnlRate.toFixed(2)}%`;
+  pnlRateEl.className   = `pnl-rate ${pnlCls}`;
+
+  return { pnl, currentVal, isTW };
+}
+
+// ===== 計算並渲染全部 =====
+function renderAll(stockData) {
+  let twVal = 0, twPnl = 0, usVal = 0, usPnl = 0;
+
+  Object.entries(stockData).forEach(([ticker, d]) => {
+    const { pnl, currentVal, isTW } = renderCard(ticker, d.price, d.change, d.pct);
+    if (isTW) { twVal += currentVal; twPnl += pnl; }
+    else       { usVal += currentVal; usPnl += pnl; }
+  });
+
+  // Summary bar
+  const twPnlCls = dirClass(twPnl);
+  const usPnlCls = dirClass(usPnl);
+  document.getElementById('tw-total-value').textContent = `NT$${fmt(twVal)}`;
+  document.getElementById('tw-total-pnl').innerHTML =
+    `<span class="${twPnlCls}">${twPnl >= 0 ? '+' : ''}NT$${fmt(twPnl)}</span>`;
+  document.getElementById('us-total-value').textContent = `$${fmt(usVal, 0)}`;
+  document.getElementById('us-total-pnl').innerHTML =
+    `<span class="${usPnlCls}">${usPnl >= 0 ? '+' : ''}$${fmt(Math.abs(usPnl), 0)}</span>`;
+
+  const now = new Date();
+  document.getElementById('update-time').textContent =
+    `資料更新：${now.toLocaleDateString('zh-TW')} ${now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}`;
+}
+
+// ===== 嘗試從 Yahoo Finance 抓取即時資料 =====
+async function fetchYahooPrice(symbol) {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=1d&range=2d`;
+  const res = await fetch(url, { mode: 'cors', cache: 'no-store' });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  const json = await res.json();
+  const closes = json.chart.result[0].indicators.quote[0].close;
+  const current = closes[closes.length - 1];
+  const previous = closes[closes.length - 2] ?? current;
+  const change = current - previous;
+  const pct = (change / previous) * 100;
+  return { price: current, change, pct };
+}
+
+async function loadLiveData() {
+  const tickers = { "2330": "2330.TW", "2454": "2454.TW", "NVDA": "NVDA", "MSFT": "MSFT" };
+  let anyLive = false;
+  const result = { ...DEFAULT_DATA };
+
+  await Promise.allSettled(
+    Object.entries(tickers).map(async ([key, yf]) => {
+      try {
+        const d = await fetchYahooPrice(yf);
+        result[key] = { price: d.price, change: d.change, pct: d.pct };
+        anyLive = true;
+      } catch (_) {}
+    })
+  );
+
+  if (!anyLive) {
+    document.getElementById('data-notice').style.display = 'block';
+  } else {
+    document.getElementById('data-source-badge').textContent = '● 即時資料';
+    document.getElementById('data-source-badge').style.background = '#0a2a1a';
+    document.getElementById('data-source-badge').style.color = '#2ecc71';
+    document.getElementById('data-source-badge').style.borderColor = '#2ecc71';
+  }
+
+  renderAll(result);
+}
+
+// ===== 新聞篩選 =====
+function initNewsFilter() {
+  const btns = document.querySelectorAll('.filter-btn');
+  let activeFilter = 'all';
+  let lastFilter = 'all';
+
+  btns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const filter = btn.dataset.filter;
+
+      if (filter !== 'all' && filter === lastFilter && activeFilter === filter) {
+        // 再次點相同 → 恢復全部
+        activeFilter = 'all';
+        lastFilter = 'all';
+        btns.forEach(b => b.classList.toggle('active', b.dataset.filter === 'all'));
+      } else {
+        activeFilter = filter;
+        lastFilter = filter;
+        btns.forEach(b => b.classList.toggle('active', b.dataset.filter === filter));
+      }
+
+      document.querySelectorAll('.news-item').forEach(item => {
+        if (activeFilter === 'all') {
+          item.classList.remove('hidden');
+        } else {
+          item.classList.toggle('hidden', item.dataset.stock !== activeFilter);
+        }
+      });
+    });
+  });
+}
+
+// ===== 初始化 =====
+(function init() {
+  // 立刻用預設資料渲染，避免頁面空白
+  renderAll(DEFAULT_DATA);
+  initNewsFilter();
+  // 嘗試載入即時資料
+  loadLiveData();
+})();
+</script>
+
+</body>
+</html>
